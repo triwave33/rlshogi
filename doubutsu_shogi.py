@@ -1,0 +1,13 @@
+ROW_LENGTH = 4
+COL_LENGTH = 3
+MIN_ROW_COL_LENGTH = 3
+OPPONENTS_AREA_ROW_NUM = 1
+
+LABEL_OFFSET_X =0.37
+LABEL_OFFSET_Y =0.34
+LABEL_SIZE= 20
+
+SENTE_MOCHIGOMA_PLOT_POS = (150, 20)
+GOTE_MOCHIGOMA_PLOT_POS = (150, 320)
+init_spawn_file = "initial_koma_spawn_doubutsu.csv"
+mochigoma_type_list = [-7,-6,-1,1,6,7]
