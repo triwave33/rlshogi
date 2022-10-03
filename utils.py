@@ -1,7 +1,7 @@
 from enum import Enum
 import numpy as np
-#from full_shogi import *
-from doubutsu_shogi import *
+from full_shogi import *
+#from doubutsu_shogi import *
 
 movable_region = {
     # NOTE should be inversed direction

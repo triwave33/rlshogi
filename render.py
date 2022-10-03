@@ -2,10 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import patches
 from utils import *
-from layer import *
+from full_shogi_layer import *
 import json
 import time
-
 
 
  
@@ -16,7 +15,7 @@ class ShogiBan():
         self.nrows = ROW_LENGTH
         self.ncols = COL_LENGTH
         self.num_koma_type = len(koma_name_to_type_dict)
-        self.num_mochigoma = len(MochigomaLayerIndex)
+        self.num_layer = len(MochigomaLayerIndex)
         self.sente_koma_list = []
         self.gote_koma_list = []
         self.init_all_state()
@@ -26,21 +25,23 @@ class ShogiBan():
         self.all_state = {}
         self.all_state['ban'] = np.zeros((self.nrows, self.ncols), dtype=np.int16)
         self.all_state['mochigoma'] = {k : 0 for k in mochigoma_type_list}
-        self.state = np.zeros((2 * (self.num_koma_type + self.num_mochigoma),\
-                                                        self.nrows,\
-                                                        self.ncols))
+        self.state = np.zeros((self.num_layer, self.nrows, self.ncols))
 
         with open(init_spawn_file, "r") as f:
             for line in f.readlines():
+                print(line)
                 line = line.replace('\n', '')
                 line_list = line.split(',')
                 koma_type, row, col = [int(l) for l in line_list]
 
                 self.all_state['ban'][row, col] = koma_type
-                self.all_state['ban'][self._invert_position(row, col)] = -1 * koma_type    # invert for "gote" player
+                inv_r, inv_c = self._invert_position(row, col)
+                self.all_state['ban'][inv_r, inv_c] = -1 * koma_type    # invert for "gote" player
 
                 self.state[ban_index_to_layer_index[koma_type], row, col] = 1
-                self.state[ban_index_to_layer_index[-1 * koma_type], self._invert_position(row, col)] = 1 # invert for "gote" player
+                self.state[ban_index_to_layer_index[-1 * koma_type], inv_r, inv_c] = 1 # invert for "gote" player
+                print(self.state[ban_index_to_layer_index[koma_type],:,:])
+                print(self.state[ban_index_to_layer_index[-1*koma_type],:,:])
 
 
     def init_fig(self):
@@ -271,21 +272,26 @@ class ShogiBan():
 
        
     def move(self, player:str, koma_type:int, row:int, col:int, row_from:int=None, col_from:int=None, render=False):
+
+        reward = 0
         koma_promotion_check = False
              
         # Check 1: Player put valid koma type
         if not self._is_valid_koma_index(player, koma_type):
+            reward -= 1
             print(f"Valid koma index, for player {player}")
-            return False
+            return False, reward
 
         # Check 2: Player set row, col inside or shogiban
         if not self._is_within_grid(row, col):
+            reward -= 1
             print("row, col are outside grid.")
-            return False
+            return False, reward
         
         # Check 3: Player does not put koma on pre-existing own koma.
         koma_side = self._koma_side_on_moving_pos(player, row, col)
         if koma_side == 1:
+            reward -= 1
             print("own koma already exists on moving position")
             return False
         elif koma_side == 0:
@@ -318,9 +324,11 @@ class ShogiBan():
                         self.render(row, col)
                     return True
                 else: 
+                    reward -= 1
                     print("Player can put mochigoma only on empty space")
                     return False
             else:
+                reward -= 1
                 print("for all movable komas, obstacle exists. Or you doesn't has mochigoma. No koma can move")
                 return False
 
@@ -385,22 +393,27 @@ class ShogiBan():
        
         ### By above health check, player can move koma.
 
-      
-
     def _all_state_to_state(self):
-        for i in range(self.nrows):
-            for j in range(self.ncols):
-                val = self.all_state[i,j]
-                assert self._is_valid_koma_index(val)
-                if val > 0: # Sente
-                    self.state[(val-1),i,j] = 1
+        self.state[:,:,:] = 0 
+        for row in range(self.nrows):
+            for col in range(self.ncols):
+                koma_type = self.all_state['ban'][row, col]
+                if koma_type != 0:
+                    self.state[ban_index_to_layer_index[koma_type], row, col] = 1
+        for k,v in shogiban.all_state['mochigoma'].items():
+            if v > 0:
+                for i in range(v):
+                    index = mochigoma_index_to_layer_index[k][i]
+                    self.state[index, :, :] = 1
+        
+
+
 
                     
 
 ##plt.ion()
 shogiban = ShogiBan()
 
-'''
 with open("kihu_04.txt", "r") as f:
     discard_line = True
     for i ,line in enumerate(f.readlines()):
@@ -426,7 +439,6 @@ with open("kihu_04.txt", "r") as f:
             print(f"line match at {i}")
             discard_line = False
             start_line = i
-'''
 
 
 
